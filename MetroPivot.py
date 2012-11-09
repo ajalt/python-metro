@@ -5,6 +5,7 @@ http://qt.digia.com/Blogs/Qt-blog/Sami-Makkonen/Dates/2012/1/2012/
 '''
 
 import sys
+import collections
 
 from PySide import QtCore, QtGui
 from PySide.QtCore import Qt
@@ -27,17 +28,15 @@ class Style:
     animation_time = 400
 
 class PivotView(QtGui.QGraphicsView):
-    def __init__(self, scene, parent=None):
+    def __init__(self, scene, tabs=None, parent=None):
         super(PivotView, self).__init__(scene, parent)
         
-        self.item_count = 6
+        self.tabs = tabs or {}
 
-        
         self.header_items = []
         self.header_animations = []
         self.content_items = []
         self.content_animations = []
-        
         
         self.current_item = 0
         self.mouse_x_position = 0
@@ -76,21 +75,21 @@ class PivotView(QtGui.QGraphicsView):
         x_pos = Style.component_margin
     
         # create pivot header items
-        for i in xrange(self.item_count):
-            tmp = QtGui.QGraphicsTextItem()
-            tmp.setAcceptHoverEvents(False)
-            tmp.setPlainText('PivotItem%d' % i)
-            tmp.setFont(Style.header_font)
-            tmp.adjustSize()
-            tmp.setDefaultTextColor(Style.ui_text_color)
+        for i, text in enumerate(self.tabs.iterkeys()):
+            text_item = QtGui.QGraphicsTextItem()
+            text_item.setAcceptHoverEvents(False)
+            text_item.setPlainText(text)
+            text_item.setFont(Style.header_font)
+            text_item.adjustSize()
+            text_item.setDefaultTextColor(Style.ui_text_color)
     
             # place header below header text
-            tmp.setPos(x_pos, (Style.component_margin* 2 + Style.body_text_size))
+            text_item.setPos(x_pos, (Style.component_margin* 2 + Style.body_text_size))
     
             # calculate position for the next item. ComponentMargin + item width + ComponentMargin
-            x_pos = x_pos + tmp.textWidth() + Style.component_margin
+            x_pos = x_pos + text_item.textWidth() + Style.component_margin
     
-            anim = QtCore.QPropertyAnimation(tmp, 'pos')
+            anim = QtCore.QPropertyAnimation(text_item, 'pos')
             anim.setDuration(Style.animation_time)
             anim.setPropertyName('pos')
             anim.setEasingCurve(QtCore.QEasingCurve.OutCirc)
@@ -99,25 +98,19 @@ class PivotView(QtGui.QGraphicsView):
     
             # remove highlight from all items except the current one
             if i > 0:
-                tmp.setOpacity(0.3)
+                text_item.setOpacity(0.3)
     
-            self.header_items.append(tmp)
-            self.scene().addItem(tmp)
+            self.header_items.append(text_item)
+            self.scene().addItem(text_item)
+            
             
     def _create_content_items(self):
-        paragraphs = ["Metro is an internal code name of a typography-based design language created by Microsoft, originally for use in Windows Phone 7. A key design principle of Metro is better focus on the content of applications, relying more on typography and less on graphics (\"content before chrome\"). Early uses of the Metro principles began as early as Microsoft Encarta 95 and MSN 2.0, and later evolved into Windows Media Center and Zune. Later the principles of Metro were included in Windows Phone, Microsoft's website, the Xbox 360 dashboard update, and Windows 8.",
-                      "Metro is based on the design principles of classic Swiss graphic design. Early glimpses of this style could be seen in Windows Media Center for Windows XP Media Center Edition, which favored text as the primary form of navigation. This interface carried over into later iterations of Media Center. In 2006, Zune refreshed its interface using these principles. Microsoft designers decided to redesign the interface and with more focus on clean typography and less on UI chrome. These principles and the new Zune UI were carried over to Windows Phone 7 (from which much was drawn for Windows 8). The Zune Desktop Client was also redesigned with an emphasis on typography and clean design that was different from the Zune's previous Portable Media Center based UI. Flat colored \"live tiles\" were introduced into the design language during the early Windows Phone's studies. Microsoft has begun integrating these elements of the design language into its other products, with direct influence being seen in newer versions of Windows Live Messenger, Live Mesh, and Windows 8.",
-                      "Microsoft's design team says that the design language is partly inspired by signs commonly found at public transport systems; for instance, those found on the King County Metro transit system, which serves the greater Seattle area where Microsoft is headquartered. The design language places emphasis on good typography and has large text that catches the eye. Microsoft says that the design language is designed to be \"sleek, quick, modern\" and a \"refresh\" from the icon-based interfaces of Windows, Android, and iOS. All instances use fonts based on the Segoe font family designed by Steve Matteson at Agfa Monotype and licensed to Microsoft. For the Zune, Microsoft created a custom version called Zegoe UI, and for Windows Phone, Microsoft created the \"Segoe WP\" font family. The fonts mostly differ only in minor details. More obvious differences between Segoe UI and Segoe WP are apparent in their respective numerical characters. The Segoe UI in Windows 8 had an obvious differences as being similar to Segoe WP. Notable characters had a typographic changes of the characters 1, 2, 4, 5, 7, 8, I, and Q.",
-                      "The design language was designed specifically to consolidate groups of common tasks to speed up usage. This is accomplished by excluding superfluous graphics and instead relying on the actual content to also function as the main UI. The resulting interfaces favour larger hubs over smaller buttons and often feature laterally scrolling canvases. Page titles are usually large and consequently also take advantage of lateral scrolling.",
-                      "Animation plays a large part, with transitions, and user interactions such as presses or swipes recommended to always be acknowledged by some form of natural animation or motion. This is intended to give the user the impression that the UI is \"alive\" and responsive, with \"an added sense of depth.\"",
-                      "Close to the official launch date of Windows 8 (October 26, 2012), more developers and Microsoft partners started working on creating new Metro applications, and many websites with resources related to this topic have been created, as well as the Microsoft's UX guidelines for Windows Store Apps.",
-                     ]
         x_pos = Style.component_margin
         # scene width - margins
         text_width = self.scene().width() - 2 * Style.component_margin
     
         # create pivot items text
-        for i, text in enumerate(paragraphs):
+        for i, text in enumerate(self.tabs.itervalues()):
             tmp = QtGui.QGraphicsTextItem()
             tmp.setFont(Style.body_font)
             tmp.setAcceptHoverEvents(False)
@@ -146,33 +139,41 @@ class PivotView(QtGui.QGraphicsView):
         self.mouse_x_position = event.pos().x()
         
     def mouseMoveEvent(self, event):
-        # negative is to left and positive is to right
+        # move the header by the width of oen item
+        calc_header_x_offset = lambda i: self.header_items[i].textWidth() + Style.component_margin
+        
+        # a negative value means the mouse moved left
         delta_x = event.pos().x() - self.mouse_x_position
     
         # don't start animations twice
         if (self.group_animation_content.state() != QtCore.QAbstractAnimation.Running and
             self.group_animation_header.state() != QtCore.QAbstractAnimation.Running):
+            
             # sweep left 
             if delta_x < 0:
                 # don't get over the edge
-                if self.current_item + 1 < self.item_count:
+                if self.current_item < len(self.tabs) - 1:
+                    # move the header by the width of the current item
+                    header_x_offset = -calc_header_x_offset(self.current_item)
                     self.current_item += 1
                     self.start_content_animation(True)
-                    self.start_header_animation(True)
+                    self.start_header_animation(header_x_offset)
                 
             # sweep right
             elif delta_x > 0:
                 # don't get over the edge
-                if self.current_item - 1 >= 0:
+                if self.current_item > 0:
                     self.current_item -= 1
+                    # move the header by the width of the item being moved into place
+                    header_x_offset = calc_header_x_offset(self.current_item)
                     self.start_content_animation(False)
-                    self.start_header_animation(False)
+                    self.start_header_animation(header_x_offset)
                     
         self.mouse_x_position = event.pos().x()
         
     def start_content_animation(self, sweep_left=True):
         # create animation items
-        for i in xrange(self.item_count):
+        for i in xrange(len(self.tabs)):
             text = self.content_items[i]
             start = text.pos()
             end = text.pos()
@@ -187,17 +188,12 @@ class PivotView(QtGui.QGraphicsView):
             
         self.group_animation_content.start()
 
-    def start_header_animation(self, sweep_left=True):
-        # create animation items
-        for i in xrange(self.item_count):
+    def start_header_animation(self, x_offset):
+        for i in xrange(len(self.tabs)):
             text = self.header_items[i]
             start = text.pos()
             end = text.pos()
-            
-            if sweep_left:
-                end.setX(end.x() - text.textWidth() - Style.component_margin)
-            else:
-                end.setX(end.x() + text.textWidth() + Style.component_margin)
+            end.setX(end.x() + x_offset)
                 
             self.header_animations[i].setStartValue(start)
             self.header_animations[i].setEndValue(end)
@@ -209,6 +205,7 @@ class PivotView(QtGui.QGraphicsView):
         self.group_animation_header.start()
         self.opacity_animator.start()
         
+        
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
@@ -217,7 +214,15 @@ if __name__ == '__main__':
     scene = QtGui.QGraphicsScene()
     scene.setSceneRect(0.0, 0.0, view_rect.width(), view_rect.height())
     
-    view = PivotView(scene)
+    tabs = collections.OrderedDict((('Summary',"Metro is an internal code name of a typography-based design language created by Microsoft, originally for use in Windows Phone 7. A key design principle of Metro is better focus on the content of applications, relying more on typography and less on graphics (\"content before chrome\"). Early uses of the Metro principles began as early as Microsoft Encarta 95 and MSN 2.0, and later evolved into Windows Media Center and Zune. Later the principles of Metro were included in Windows Phone, Microsoft's website, the Xbox 360 dashboard update, and Windows 8."),
+            ('History',"Metro is based on the design principles of classic Swiss graphic design. Early glimpses of this style could be seen in Windows Media Center for Windows XP Media Center Edition, which favored text as the primary form of navigation. This interface carried over into later iterations of Media Center. In 2006, Zune refreshed its interface using these principles. Microsoft designers decided to redesign the interface and with more focus on clean typography and less on UI chrome. These principles and the new Zune UI were carried over to Windows Phone 7 (from which much was drawn for Windows 8). The Zune Desktop Client was also redesigned with an emphasis on typography and clean design that was different from the Zune's previous Portable Media Center based UI. Flat colored \"live tiles\" were introduced into the design language during the early Windows Phone's studies. Microsoft has begun integrating these elements of the design language into its other products, with direct influence being seen in newer versions of Windows Live Messenger, Live Mesh, and Windows 8."),
+            ('Principles 1',"Microsoft's design team says that the design language is partly inspired by signs commonly found at public transport systems; for instance, those found on the King County Metro transit system, which serves the greater Seattle area where Microsoft is headquartered. The design language places emphasis on good typography and has large text that catches the eye. Microsoft says that the design language is designed to be \"sleek, quick, modern\" and a \"refresh\" from the icon-based interfaces of Windows, Android, and iOS. All instances use fonts based on the Segoe font family designed by Steve Matteson at Agfa Monotype and licensed to Microsoft. For the Zune, Microsoft created a custom version called Zegoe UI, and for Windows Phone, Microsoft created the \"Segoe WP\" font family. The fonts mostly differ only in minor details. More obvious differences between Segoe UI and Segoe WP are apparent in their respective numerical characters. The Segoe UI in Windows 8 had an obvious differences as being similar to Segoe WP. Notable characters had a typographic changes of the characters 1, 2, 4, 5, 7, 8, I, and Q."),
+            ('Principles 2',"The design language was designed specifically to consolidate groups of common tasks to speed up usage. This is accomplished by excluding superfluous graphics and instead relying on the actual content to also function as the main UI. The resulting interfaces favour larger hubs over smaller buttons and often feature laterally scrolling canvases. Page titles are usually large and consequently also take advantage of lateral scrolling."),
+            ('Principles 3',"Animation plays a large part, with transitions, and user interactions such as presses or swipes recommended to always be acknowledged by some form of natural animation or motion. This is intended to give the user the impression that the UI is \"alive\" and responsive, with \"an added sense of depth.\""),
+            ('Principles 4',"Close to the official launch date of Windows 8 (October 26, 2012), more developers and Microsoft partners started working on creating new Metro applications, and many websites with resources related to this topic have been created, as well as the Microsoft's UX guidelines for Windows Store Apps."),
+    ))
+    
+    view = PivotView(scene, tabs=tabs)
     view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setGeometry(view_rect)
