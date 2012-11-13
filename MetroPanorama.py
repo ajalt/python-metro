@@ -1,4 +1,4 @@
-''' Demo of a Metro-style pivot view.
+''' Demo of a Metro-style panorama view.
 
 Inspired by Sami Makkonen in his blog post here:
 http://qt.digia.com/Blogs/Qt-blog/Sami-Makkonen/Dates/2012/1/2012/
@@ -28,9 +28,9 @@ class Style:
     # ui animation duration
     animation_time = 400
 
-class PivotView(QtGui.QGraphicsView):
+class PanoramaView(QtGui.QGraphicsView):
     def __init__(self, scene, tabs=None, parent=None):
-        super(PivotView, self).__init__(scene, parent)
+        super(PanoramaView, self).__init__(scene, parent)
         
         self.tabs = tabs or {}
 
@@ -67,7 +67,7 @@ class PivotView(QtGui.QGraphicsView):
         bar = QtGui.QGraphicsTextItem()
         bar.setAcceptHoverEvents(False)
         bar.setFont(Style.body_font)
-        bar.setPlainText("Python Metro Style Pivot")
+        bar.setPlainText("Python Metro Style Panorama")
         bar.setDefaultTextColor(Style.ui_text_color)
         bar.setPos(Style.component_margin, Style.component_margin)
         self.scene().addItem(bar)
@@ -75,7 +75,7 @@ class PivotView(QtGui.QGraphicsView):
     def _create_metro_tab_bar(self):
         x_pos = Style.component_margin
     
-        # create pivot header items
+        # create panorama header items
         for i, text in enumerate(self.tabs.iterkeys()):
             text_item = QtGui.QGraphicsTextItem()
             text_item.setAcceptHoverEvents(False)
@@ -110,7 +110,7 @@ class PivotView(QtGui.QGraphicsView):
         # scene width - margins
         text_width = self.scene().width() - 2 * Style.component_margin
     
-        # create pivot items text
+        # create panorama items text
         for i, text in enumerate(self.tabs.itervalues()):
             tmp = QtGui.QGraphicsTextItem()
             tmp.setFont(Style.body_font)
@@ -119,7 +119,7 @@ class PivotView(QtGui.QGraphicsView):
             tmp.setTextWidth(text_width)
             tmp.setDefaultTextColor(Style.ui_text_color)
     
-            # place content below header and pivot
+            # place content below header
             tmp.setPos(x_pos,(Style.component_margin * 4 +
                               Style.body_text_size + Style.header_text_size))
     
@@ -222,7 +222,7 @@ if __name__ == '__main__':
             ('Principles 4',"Close to the official launch date of Windows 8 (October 26, 2012), more developers and Microsoft partners started working on creating new Metro applications, and many websites with resources related to this topic have been created, as well as the Microsoft's UX guidelines for Windows Store Apps."),
     ))
     
-    view = PivotView(scene, tabs=tabs)
+    view = PanoramaView(scene, tabs=tabs)
     view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
     view.setGeometry(view_rect)
