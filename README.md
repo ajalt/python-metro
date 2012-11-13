@@ -1,3 +1,3 @@
-#python-qt-metro
+#Python Metro Apps
 
-PySide/PyQt applications in the Windows Modern UI style.
+Python applications in the Windows Modern UI style.
